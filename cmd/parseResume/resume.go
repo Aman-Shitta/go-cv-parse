@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	pdfconv "example.com/resPars/internal/utils"
+	helper "example.com/resPars/internal/utils"
 	"github.com/otiai10/gosseract/v2"
 )
 
@@ -20,10 +20,10 @@ type Page struct {
 	failed  bool
 }
 
-func (p Page) String() (line string) {
+func (p *Page) String() (line string) {
 	for _, word := range p.words {
 		// word will have Box, Word, Confidence etc.
-		line += " " + strings.Trim(word.Word, "\n")
+		line += " " + strings.Trim(word.Word, "\n") + " "
 	}
 
 	return line
@@ -50,22 +50,16 @@ func extractWordsToPages(client *gosseract.Client, path string, pages *[]Page, p
 
 }
 
-func ProcessResume() {
-
-	var pages []Page
-
-	if len(os.Args) < 2 {
-		log.Fatal("Usage: ./main <resume_path> [IMG or PDF]")
-	}
-
-	resumePath := os.Args[1]
-	fmt.Printf("Got %s for %s\n", filepath.Ext(resumePath), resumePath)
-
-	fileExt := strings.ToLower(filepath.Ext(resumePath))
+func extractPageData(resumePath string) (pages []Page, tempPath string, err error) {
 
 	client := gosseract.NewClient()
 
 	defer client.Close()
+
+	fileExt := strings.ToLower(filepath.Ext(resumePath))
+	fileName := helper.FileNameWithoutExtension(strings.ToLower(filepath.Base(resumePath)))
+
+	var outImgsPath string
 
 	switch fileExt {
 	case ".png":
@@ -73,17 +67,18 @@ func ProcessResume() {
 
 	case ".pdf":
 
-		outImgsPath, err := os.MkdirTemp("", "")
+		outImgsPath, err := os.MkdirTemp("", fileName)
+
 		if err != nil {
-			log.Fatal("Error creating temp folder :: ", err.Error())
+			return nil, outImgsPath, fmt.Errorf("error creating temp folder : %s", err.Error())
 		}
 
 		fmt.Printf("[+] Processing PDF @ %s [+]\n", outImgsPath)
 
-		_, err = pdfconv.ConvertPdfToImg(resumePath, outImgsPath)
+		_, err = helper.ConvertPdfToImg(resumePath, outImgsPath)
 
 		if err != nil {
-			log.Fatal("Error converting file", err.Error())
+			return nil, outImgsPath, fmt.Errorf("error converting file : %s", err.Error())
 		}
 		i := 0
 		err = filepath.Walk(outImgsPath, func(
@@ -96,12 +91,34 @@ func ProcessResume() {
 		})
 
 		if err != nil {
-			log.Fatal("Error Extracting from PDF pages :: ", err.Error())
+			return nil, outImgsPath, fmt.Errorf("error Extracting from PDF pages : %s", err.Error())
 		}
 	case ".jpeg", ".jpg":
-		log.Fatal("JPEG is currently not working.")
+		return nil, outImgsPath, fmt.Errorf("fomat JPEG is currently not working")
 	default:
-		log.Fatalf("Format %s not supported yet.", fileExt)
+		return nil, outImgsPath, fmt.Errorf("format %s not supported yet", fileExt)
+	}
+
+	return pages, outImgsPath, nil
+}
+
+func ProcessResume() {
+
+	if len(os.Args) < 2 {
+		log.Fatal("Usage: ./main <resume_path> [IMG or PDF]")
+	}
+
+	resumePath := os.Args[1]
+	fmt.Printf("Got %s for %s\n", filepath.Ext(resumePath), resumePath)
+
+	pages, tempDir, err := extractPageData(resumePath)
+
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
+
+	if err != nil {
+		log.Fatal("extractPageData : err : ", err.Error())
 	}
 
 	// Now all goroutines have completed; we can safely iterate over `pages`
@@ -109,4 +126,5 @@ func ProcessResume() {
 	for _, p := range pages {
 		fmt.Println(p)
 	}
+
 }

@@ -1,4 +1,4 @@
-package pdfconv
+package helper
 
 import (
 	"fmt"
