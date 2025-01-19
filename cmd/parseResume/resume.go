@@ -21,31 +21,23 @@ type Page struct {
 }
 
 func (p Page) String() (line string) {
-	var conf float64
 	for _, word := range p.words {
-		conf += word.Confidence
 		// word will have Box, Word, Confidence etc.
-		line += " " + word.Word
-		conf = conf / 2
+		line += " " + strings.Trim(word.Word, "\n")
 	}
 
-	return fmt.Sprintf("%s : %.02f", line, conf)
+	return line
 }
 
-func extractWordsToPages(path string, pages *[]Page, page int) {
-
+func extractWordsToPages(client *gosseract.Client, path string, pages *[]Page, page int) {
 	var err error
 	var failed bool = true
-	// init client
-	client := gosseract.NewClient()
-
-	defer client.Close()
 
 	client.SetImage(path)
+
 	words, err := client.GetBoundingBoxesVerbose()
 
 	if err != nil {
-		fmt.Println("BB error", err.Error())
 		failed = true
 		words = nil
 	}
@@ -71,9 +63,13 @@ func ProcessResume() {
 
 	fileExt := strings.ToLower(filepath.Ext(resumePath))
 
+	client := gosseract.NewClient()
+
+	defer client.Close()
+
 	switch fileExt {
-	case ".jpeg", ".jpg", ".png":
-		extractWordsToPages(resumePath, &pages, 0)
+	case ".png":
+		extractWordsToPages(client, resumePath, &pages, 0)
 
 	case ".pdf":
 
@@ -93,13 +89,7 @@ func ProcessResume() {
 		err = filepath.Walk(outImgsPath, func(
 			path string, d fs.FileInfo, err_ error) error {
 			if d.Mode().IsRegular() && d.Size() > 0 {
-
-				extractWordsToPages(path, &pages, i)
-
-				// if err != nil {
-				// 	return err
-				// }
-				// pages = append(pages, Page{i, words, false})
+				extractWordsToPages(client, path, &pages, i)
 				i++
 			}
 			return nil
@@ -108,6 +98,8 @@ func ProcessResume() {
 		if err != nil {
 			log.Fatal("Error Extracting from PDF pages :: ", err.Error())
 		}
+	case ".jpeg", ".jpg":
+		log.Fatal("JPEG is currently not working.")
 	default:
 		log.Fatalf("Format %s not supported yet.", fileExt)
 	}

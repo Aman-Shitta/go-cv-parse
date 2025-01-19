@@ -2,7 +2,7 @@ package pdfconv
 
 import (
 	"fmt"
-	"image/jpeg"
+	"image/png"
 	"os"
 	"path/filepath"
 
@@ -33,7 +33,7 @@ func ConvertPdfToImg(path string, outPath string) (int, error) {
 			return 0, err
 		}
 
-		err = jpeg.Encode(f, img, &jpeg.Options{Quality: jpeg.DefaultQuality})
+		err = png.Encode(f, img)
 		if err != nil {
 			return 0, err
 		}
