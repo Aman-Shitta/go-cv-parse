@@ -4,6 +4,7 @@
 Ensure your system has the necessary dependencies installed before running the Resume Parser.
 
 ### **1. Install Tesseract OCR Library**
+https://tesseract-ocr.github.io/
 ```sh
 sudo apt install libtesseract-dev
 ```
