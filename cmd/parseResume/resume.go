@@ -102,7 +102,7 @@ func extractPageData(resumePath string) (pages []Page, tempPath string, err erro
 	return pages, outImgsPath, nil
 }
 
-func ProcessResume() {
+func ProcessResume() []Page {
 
 	if len(os.Args) < 2 {
 		log.Fatal("Usage: ./main <resume_path> [IMG or PDF]")
@@ -121,10 +121,11 @@ func ProcessResume() {
 		log.Fatal("extractPageData : err : ", err.Error())
 	}
 
-	// Now all goroutines have completed; we can safely iterate over `pages`
-	fmt.Println("Final Output:")
-	for _, p := range pages {
-		fmt.Println(p)
-	}
+	// // Now all goroutines have completed; we can safely iterate over `pages`
+	// fmt.Println("Final Output:")
+	// for _, p := range pages {
+	// 	fmt.Println(p)
+	// }
 
+	return pages
 }
